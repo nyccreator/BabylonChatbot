@@ -25,7 +25,3 @@ dist-ssr
 
 # Environment variables
 .env
-
-# Prettier configuration
-.prettierrc
-prettier.config.js
