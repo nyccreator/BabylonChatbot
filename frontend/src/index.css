@@ -4,6 +4,8 @@
 	width: 0px;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
 	/* Colors */
 	--color-babylon-green: #79ae93;

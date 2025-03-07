@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 // import { getThread, createOpenAI, getAssistant } from '../utils.js'
 import "../App.css";
 
-export const ChatInterface = () => {
+export default function ChatInterface() {
 	const [text, setText] = useState("");
 	const [textArray, setTextArray] = useState([]);
 	const [thread_id, setThreadID] = useState("");
@@ -247,7 +247,6 @@ export const ChatInterface = () => {
 								<input
 									className=" absolute right-0 inline-block h-full rounded-r-3xl bg-babylon-blue-dark text-white dark:bg-babylon-blue-light"
 									type="image"
-									id="button"
 									name="submit"
 									src="/src/assets/next.png"
 									alt="Submit"
@@ -274,4 +273,4 @@ export const ChatInterface = () => {
 			</div>
 		</>
 	);
-};
+}

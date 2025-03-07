@@ -1,23 +1,23 @@
-import { useState } from 'react'
-import { FaStar } from 'react-icons/fa'
-import '../App.css'
+import { useState } from "react";
+import { FaStar } from "react-icons/fa";
+import "../App.css";
 
-export const StarRating = () => {
-	const [rating, setRating] = useState(null)
-	const [isRatingSet, setIsRatingSet] = useState(false)
-	const [hover, setHover] = useState(null)
+export default function StarRating() {
+	const [rating, setRating] = useState(null);
+	const [isRatingSet, setIsRatingSet] = useState(false);
+	const [hover, setHover] = useState(null);
 
 	return (
 		<div className="">
 			<div className="flex justify-center pt-5">
 				{[...Array(5)].map((star, index) => {
-					const currentRating = index + 1
+					const currentRating = index + 1;
 					return isRatingSet ? (
 						<label key={index}>
 							<FaStar
 								className="top-5 mb-5 cursor-pointer"
 								size={30}
-								color={currentRating <= rating ? '#004258' : '#e4e5e9'}
+								color={currentRating <= rating ? "#004258" : "#e4e5e9"}
 							/>
 						</label>
 					) : (
@@ -28,19 +28,21 @@ export const StarRating = () => {
 								name="rating"
 								value={currentRating}
 								onClick={() => {
-									setRating(currentRating)
-									setIsRatingSet(true)
+									setRating(currentRating);
+									setIsRatingSet(true);
 								}}
 							/>
 							<FaStar
 								className="top-5 mb-5 cursor-pointer"
 								size={30}
-								color={currentRating <= (hover || rating) ? '#004258' : '#e4e5e9'}
+								color={
+									currentRating <= (hover || rating) ? "#004258" : "#e4e5e9"
+								}
 								onMouseEnter={() => setHover(currentRating)}
 								onMouseLeave={() => setHover(null)}
 							/>
 						</label>
-					)
+					);
 				})}
 			</div>
 			{rating === 1 && (
@@ -69,5 +71,5 @@ export const StarRating = () => {
 				</h4>
 			)}
 		</div>
-	)
+	);
 }

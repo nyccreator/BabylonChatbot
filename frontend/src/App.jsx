@@ -1,21 +1,29 @@
 import { useState, useEffect, useRef } from "react";
-import "./App.css";
-import { ChatInterface } from "./components/ChatInterface";
-import { PopUp } from "./components/PopUp.jsx";
-import { StarRating } from "./components/StarRating.jsx";
+import ChatInterface from "./components/ChatInterface";
+import PopUp from "./components/PopUp.jsx";
+import LoginPopUp from "./components/LoginPopUp.jsx";
+import StarRating from "./components/StarRating.jsx";
+import SignupPopUp from "./components/SignupPopUp.jsx";
+import { useQuery } from "@tanstack/react-query";
+import ProfilePopUp from "./components/ProfilePopUp.jsx";
 
 export default function App() {
-	const [username, setUsername] = useState("");
-	const [password, setPassword] = useState("");
-	const [savedUsername, setSavedUsername] = useState("");
-	const [savedPassword, setSavedPassword] = useState("");
 	const [ratingPopup, setRatingPopup] = useState(false);
 	const [profilePopup, setProfilePopup] = useState(false);
+	const [loginPopup, setLoginPopup] = useState(false);
+	const [signupPopup, setSignupPopup] = useState(false);
 	const [faqPopup, setFaqPopup] = useState(false);
-	const [isProfileSet, setIsProfileSet] = useState(false);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [colorScheme, setColorScheme] = useState("");
 
 	let popUpRef = useRef();
+
+	const fetchAuthenticatedUser = async () => {
+		const response = await fetch(`${import.meta.env.VITE_BASE_URL}/me`, {
+			credentials: "include",
+		});
+		return response.json();
+	};
 
 	useEffect(() => {
 		let handler = (e) => {
@@ -29,6 +37,25 @@ export default function App() {
 		};
 	});
 
+	const { data } = useQuery({
+		queryKey: ["user"],
+		queryFn: fetchAuthenticatedUser,
+		refetchOnMount: false,
+		refetchOnWindowFocus: false,
+		retry: 0,
+	});
+
+	useEffect(() => {
+		console.log(data);
+		if (!data) {
+			setLoginPopup(true);
+			setSignupPopup(false);
+			setProfilePopup(false);
+		} else {
+			setLoginPopup(false);
+		}
+	}, [data]);
+
 	return (
 		<div className={colorScheme}>
 			<div className="flex h-dvh w-dvw gap-0 bg-babylon-blue-light dark:bg-babylon-blue-dark">
@@ -37,25 +64,29 @@ export default function App() {
 					ref={popUpRef}
 				>
 					<button
-						className="hover:animate-vote"
-						onClick={() => setProfilePopup(!profilePopup)}
+						className="hover:animate-vote cursor-pointer"
+						onClick={() => {
+							if (data) {
+								setProfilePopup(!profilePopup);
+							}
+						}}
 					>
 						<img className="" src="/src/assets/Profile-Icon.png" alt="logo" />
 					</button>
 
-					<button className="hover:animate-vote">
+					<button className="hover:animate-vote cursor-pointer">
 						<img className="" src="/src/assets/layout.png" alt="logo" />
 					</button>
 
 					<button
-						className="hover:animate-vote"
+						className="hover:animate-vote cursor-pointer"
 						onClick={() => setRatingPopup(!ratingPopup)}
 					>
 						<img className="" src="/src/assets/Star-Icon.png" alt="logo" />
 					</button>
 
 					<button
-						className="hover:animate-vote"
+						className="hover:animate-vote cursor-pointer"
 						onClick={() => setColorScheme(colorScheme === "dark" ? "" : "dark")}
 					>
 						{colorScheme === "dark" ? (
@@ -66,7 +97,7 @@ export default function App() {
 					</button>
 
 					<button
-						className="hover:animate-vote"
+						className="hover:animate-vote cursor-pointer"
 						onClick={() => setFaqPopup(!faqPopup)}
 					>
 						<img className="" src="/src/assets/faq.png" alt="logo" />
@@ -79,8 +110,13 @@ export default function App() {
 						<StarRating />
 					</PopUp>
 
-					<PopUp trigger={profilePopup} onClose={() => setProfilePopup(false)}>
-						{isProfileSet ? (
+					{/* <PopUp
+						// trigger={!isLoggedIn || profilePopup}
+						trigger={profilePopup}
+						onClose={() => setProfilePopup(false)}
+						closeOnClickOff={true}
+					>
+						{isLoggedIn ? (
 							<div className="relative flex flex-col items-center justify-center gap-10 pt-6 text-2xl">
 								<div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-babylon-blue-dark text-white ring ring-white dark:bg-babylon-blue-light sm:text-base md:h-16 md:w-16 md:text-lg lg:h-16 lg:w-16 lg:text-xl">
 									<img
@@ -95,7 +131,7 @@ export default function App() {
 								<form
 									onSubmit={(event) => {
 										event.preventDefault();
-										setIsProfileSet(false);
+										setIsLoggedIn(false);
 									}}
 								>
 									<input
@@ -111,7 +147,7 @@ export default function App() {
 								autoComplete="off"
 								onSubmit={(event) => {
 									event.preventDefault();
-									setIsProfileSet(true);
+									setIsLoggedIn(true);
 									setUsername("");
 									setPassword("");
 								}}
@@ -150,7 +186,26 @@ export default function App() {
 								</div>
 							</form>
 						)}
-					</PopUp>
+					</PopUp> */}
+
+					<LoginPopUp
+						isOpen={loginPopup}
+						setIsOpen={setLoginPopup}
+						setSignupPopup={setSignupPopup}
+					/>
+
+					<SignupPopUp
+						isOpen={signupPopup}
+						setIsOpen={setSignupPopup}
+						setLoginPopup={setLoginPopup}
+					/>
+
+					<ProfilePopUp
+						name={data?.name}
+						isOpen={profilePopup}
+						setIsOpen={setProfilePopup}
+						setLoginPopup={setLoginPopup}
+					/>
 
 					<PopUp trigger={faqPopup} onClose={() => setFaqPopup(false)}>
 						<div className="flex h-full flex-col gap-5 overflow-y-auto text-pretty text-babylon-blue-dark">
@@ -302,7 +357,7 @@ export default function App() {
 							trigger={profilePopup}
 							onClose={() => setProfilePopup(false)}
 						>
-							{isProfileSet ? (
+							{isLoggedIn ? (
 								<div className="relative flex flex-col items-center justify-center gap-10 pt-16 text-2xl">
 									<div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-babylon-blue-dark text-white ring ring-white dark:bg-babylon-blue-light sm:text-base md:h-16 md:w-16 md:text-lg lg:h-16 lg:w-16 lg:text-xl">
 										<img
@@ -312,12 +367,12 @@ export default function App() {
 										/>
 									</div>
 									<p className="flex font-medium text-babylon-blue-dark">
-										{savedUsername}
+										savedUsername
 									</p>
 									<form
 										onSubmit={(event) => {
 											event.preventDefault();
-											setIsProfileSet(false);
+											setIsLoggedIn(false);
 										}}
 									>
 										<input
@@ -333,9 +388,7 @@ export default function App() {
 									autoComplete="off"
 									onSubmit={(event) => {
 										event.preventDefault();
-										setIsProfileSet(true);
-										setUsername("");
-										setPassword("");
+										setIsLoggedIn(true);
 									}}
 								>
 									<div className="relative flex flex-col items-center justify-center gap-10 pt-16">
@@ -344,11 +397,6 @@ export default function App() {
 											type="text"
 											id="username"
 											placeholder="Username"
-											value={username}
-											onChange={(event) => {
-												setUsername(event.target.value);
-												setSavedUsername(event.target.value);
-											}}
 											required
 										/>
 										<input
@@ -356,11 +404,6 @@ export default function App() {
 											type="text"
 											id="password"
 											placeholder="Password"
-											value={password}
-											onChange={(event) => {
-												setPassword(event.target.value);
-												setSavedPassword(event.target.value);
-											}}
 											required
 										/>
 										<input
