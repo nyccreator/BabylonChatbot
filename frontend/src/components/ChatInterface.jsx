@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-// import { getThread, createOpenAI, getAssistant } from '../utils.js'
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import "../App.css";
 
 export default function ChatInterface() {
 	const [text, setText] = useState("");
 	const [textArray, setTextArray] = useState([]);
-	const [thread_id, setThreadID] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [isListening, setIsListening] = useState(false);
-	// const openai = createOpenAI()
-	// const assistant = getAssistant()
-	const bottomRef = useRef(null);
 
 	const handleSpeechToText = () => {
 		const SpeechRecognition =
@@ -42,68 +38,53 @@ export default function ChatInterface() {
 	};
 
 	useEffect(() => {
-		const func = async () => {
-			// const thread = await getThread(openai)
-			// setThreadID(thread)
-		};
-		func();
-	}, []);
-
-	useEffect(() => {
 		if (isListening) {
 			handleSpeechToText();
 		}
 	}, [isListening]);
 
-	const cycle = async (message, thread_id, assistant, openai) => {
-		await openai.beta.threads.messages.create(thread_id, {
-			role: "user",
-			content: message,
-		});
-		const run = await openai.beta.threads.runs.create(thread_id, {
-			assistant_id: assistant,
-		});
+	const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GOOGLE_AI_API_KEY);
+	const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+	const chat = model.startChat({
+		history: [
+			{
+				role: "user",
+				parts: [
+					{
+						text: "You are an assistant specialized in Babylon Micro-Farms. Only answer questions related to Babylon Micro-Farms. If asked about anything else, please remind the user that you only provide information on Babylon Micro-Farms.",
+					},
+				],
+			},
+			{
+				role: "model",
+				parts: [{ text: "Hi! 👋 How can I help you today?" }],
+			},
+			{
+				role: "model",
+				parts: [{ text: "Ask me anything about Babylon Micro-Farms." }],
+			},
+		],
+	});
 
-		let timeElapsed = 0;
-		while (timeElapsed < 1000) {
-			const retreiveRun = await openai.beta.threads.runs.retrieve(
-				thread_id,
-				run.id
-			);
-			if (retreiveRun.status === "completed") {
-				printMessages(thread_id, openai);
-				document.getElementById("input").disabled = false;
-				document.getElementById("button").disabled = false;
-				document.getElementById("microphone").disabled = false;
-				setLoading(false);
-				return;
-			}
-			timeElapsed += 1;
+	const sendMessage = async (message) => {
+		setTextArray((prev) => [...prev, { role: "user", message }]);
+		setLoading(true);
+		try {
+			const result = await chat.sendMessage(message);
+			const reply = result.response.text() || "No response text available";
+			console.log(chat);
+			setTextArray((prev) => [...prev, { role: "model", message: reply }]);
+		} catch (error) {
+			console.error("Error sending message:", error);
+			setTextArray((prev) => [
+				...prev,
+				{ role: "model", message: "Oops, something went wrong." },
+			]);
 		}
-		console.log("failed to respond in time");
+		setLoading(false);
 	};
 
-	const printMessages = async (thread_id, openai) => {
-		const threadMessages = await openai.beta.threads.messages.list(thread_id);
-		let textArr = [];
-
-		for (let i = threadMessages.data.length - 1; i >= 0; i--) {
-			let annotations = threadMessages.data[i].content[0].text.annotations;
-
-			for (let j = 0; j < annotations.length; j++) {
-				threadMessages.data[i].content[0].text.value = threadMessages.data[
-					i
-				].content[0].text.value.replace(annotations[j].text, "");
-			}
-
-			textArr.push({
-				role: threadMessages.data[i].role,
-				message: threadMessages.data[i].content[0].text.value,
-			});
-		}
-
-		setTextArray(textArr);
-	};
+	const bottomRef = useRef(null);
 
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,7 +143,7 @@ export default function ChatInterface() {
 						</div>
 
 						{textArray.map((element, index) =>
-							element.role === "assistant" ? (
+							element.role === "model" ? (
 								<div
 									key={index}
 									className="mr-[67.5px] flex items-start justify-start space-x-5"
@@ -222,16 +203,9 @@ export default function ChatInterface() {
 							autoComplete="off"
 							onSubmit={(event) => {
 								event.preventDefault();
-								setTextArray((textArray) => [
-									...textArray,
-									{ role: "user", message: text },
-								]);
+								// Send the message via Gemini and reset input
+								sendMessage(text);
 								setText("");
-								setLoading(true);
-								cycle(text, thread_id, assistant, openai);
-								document.getElementById("input").disabled = true;
-								document.getElementById("button").disabled = true;
-								document.getElementById("microphone").disabled = true;
 							}}
 						>
 							<div className="relative flex flex-row items-end justify-center">

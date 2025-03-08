@@ -110,84 +110,6 @@ export default function App() {
 						<StarRating />
 					</PopUp>
 
-					{/* <PopUp
-						// trigger={!isLoggedIn || profilePopup}
-						trigger={profilePopup}
-						onClose={() => setProfilePopup(false)}
-						closeOnClickOff={true}
-					>
-						{isLoggedIn ? (
-							<div className="relative flex flex-col items-center justify-center gap-10 pt-6 text-2xl">
-								<div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-babylon-blue-dark text-white ring ring-white dark:bg-babylon-blue-light sm:text-base md:h-16 md:w-16 md:text-lg lg:h-16 lg:w-16 lg:text-xl">
-									<img
-										className="inline-block h-12 w-12 rounded-full ring ring-white md:h-16 md:w-16 lg:h-16 lg:w-16"
-										src="/src/assets/user.png"
-										alt="logo"
-									/>
-								</div>
-								<p className="flex font-medium text-babylon-blue-dark">
-									{savedUsername}
-								</p>
-								<form
-									onSubmit={(event) => {
-										event.preventDefault();
-										setIsLoggedIn(false);
-									}}
-								>
-									<input
-										type="submit"
-										id="button"
-										value="Log out"
-										className=" rounded-3xl border-2 border-babylon-blue-dark bg-white px-4 py-1 text-sm font-semibold text-black hover:border-transparent hover:bg-babylon-blue-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-babylon-blue-dark focus:ring-offset-2"
-									/>
-								</form>
-							</div>
-						) : (
-							<form
-								autoComplete="off"
-								onSubmit={(event) => {
-									event.preventDefault();
-									setIsLoggedIn(true);
-									setUsername("");
-									setPassword("");
-								}}
-							>
-								<div className="relative flex flex-col items-center justify-center gap-10 pt-10">
-									<input
-										className="block w-full rounded-3xl border border-slate-300 bg-white py-2 pl-9 pr-3 font-medium drop-shadow-lg placeholder:italic placeholder:text-slate-400 focus:border-babylon-blue-dark focus:outline-none focus:ring-1 focus:ring-babylon-blue-dark sm:text-base"
-										type="text"
-										id="username"
-										placeholder="Username"
-										value={username}
-										onChange={(event) => {
-											setUsername(event.target.value);
-											setSavedUsername(event.target.value);
-										}}
-										required
-									/>
-									<input
-										className="block w-full rounded-3xl border border-slate-300 bg-white py-2 pl-9 pr-3 font-medium drop-shadow-lg placeholder:italic placeholder:text-slate-400 focus:border-babylon-blue-dark focus:outline-none focus:ring-1 focus:ring-babylon-blue-dark sm:text-base"
-										type="text"
-										id="password"
-										placeholder="Password"
-										value={password}
-										onChange={(event) => {
-											setPassword(event.target.value);
-											setSavedPassword(event.target.value);
-										}}
-										required
-									/>
-									<input
-										type="submit"
-										id="button"
-										value="Log in"
-										className=" rounded-3xl border-2 border-babylon-blue-dark bg-white px-4 py-1 text-sm font-semibold text-black hover:border-transparent hover:bg-babylon-blue-dark hover:text-white focus:outline-none focus:ring-2 focus:ring-babylon-blue-dark focus:ring-offset-2"
-									/>
-								</div>
-							</form>
-						)}
-					</PopUp> */}
-
 					<LoginPopUp
 						isOpen={loginPopup}
 						setIsOpen={setLoginPopup}
@@ -207,7 +129,11 @@ export default function App() {
 						setLoginPopup={setLoginPopup}
 					/>
 
-					<PopUp trigger={faqPopup} onClose={() => setFaqPopup(false)}>
+					<PopUp
+						trigger={faqPopup}
+						onClose={() => setFaqPopup(false)}
+						height="2/5"
+					>
 						<div className="flex h-full flex-col gap-5 overflow-y-auto text-pretty text-babylon-blue-dark">
 							<div>
 								<p className="text-2xl font-bold">What is hydroponics?</p>
