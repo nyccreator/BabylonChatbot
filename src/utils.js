@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 
-const assistant = import.meta.env.VITE_ASSISTANT_ID;
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+const model = import.meta.env.VITE_OPENAI_MODEL || "gpt-5-nano";
+const instructions = import.meta.env.VITE_INSTRUCTIONS || "";
 
 export const createOpenAI = () => {
   if (!apiKey) return null;
@@ -11,11 +12,9 @@ export const createOpenAI = () => {
   });
 };
 
-export const getThread = async (openai) => {
-  const thread = await openai.beta.threads.create();
-  return thread.id;
+export const validateApiKey = async (openai) => {
+  await openai.models.list();
 };
 
-export const getAssistant = () => {
-  return assistant;
-};
+export const getModel = () => model;
+export const getInstructions = () => instructions;

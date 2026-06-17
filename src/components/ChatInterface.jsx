@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { getThread, createOpenAI, getAssistant } from "../utils.js";
+import {
+  createOpenAI,
+  validateApiKey,
+  getModel,
+  getInstructions,
+} from "../utils.js";
 import "../App.css";
 
 export const ChatInterface = () => {
   const [text, setText] = useState("");
   const [textArray, setTextArray] = useState([]);
-  const [thread_id, setThreadID] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [apiKeyValid, setApiKeyValid] = useState(true);
+  const [previousResponseId, setPreviousResponseId] = useState(null);
   const openai = createOpenAI();
-  const assistant = getAssistant();
+  const model = getModel();
+  const instructions = getInstructions();
   const bottomRef = useRef(null);
 
   const handleSpeechToText = () => {
@@ -49,8 +55,7 @@ export const ChatInterface = () => {
     }
     const func = async () => {
       try {
-        const thread = await getThread(openai);
-        setThreadID(thread);
+        await validateApiKey(openai);
       } catch (error) {
         setApiKeyValid(false);
       }
@@ -64,54 +69,34 @@ export const ChatInterface = () => {
     }
   }, [isListening]);
 
-  const cycle = async (message, thread_id, assistant, openai) => {
-    await openai.beta.threads.messages.create(thread_id, {
-      role: "user",
-      content: message,
-    });
-    const run = await openai.beta.threads.runs.create(thread_id, {
-      assistant_id: assistant,
-    });
-
-    let timeElapsed = 0;
-    while (timeElapsed < 1000) {
-      const retreiveRun = await openai.beta.threads.runs.retrieve(
-        thread_id,
-        run.id,
-      );
-      if (retreiveRun.status === "completed") {
-        printMessages(thread_id, openai);
-        document.getElementById("input").disabled = false;
-        document.getElementById("button").disabled = false;
-        document.getElementById("microphone").disabled = false;
-        setLoading(false);
-        return;
-      }
-      timeElapsed += 1;
-    }
-    console.log("failed to respond in time");
-  };
-
-  const printMessages = async (thread_id, openai) => {
-    const threadMessages = await openai.beta.threads.messages.list(thread_id);
-    let textArr = [];
-
-    for (let i = threadMessages.data.length - 1; i >= 0; i--) {
-      let annotations = threadMessages.data[i].content[0].text.annotations;
-
-      for (let j = 0; j < annotations.length; j++) {
-        threadMessages.data[i].content[0].text.value = threadMessages.data[
-          i
-        ].content[0].text.value.replace(annotations[j].text, "");
-      }
-
-      textArr.push({
-        role: threadMessages.data[i].role,
-        message: threadMessages.data[i].content[0].text.value,
+  const cycle = async (userMessage) => {
+    try {
+      const response = await openai.responses.create({
+        model,
+        instructions,
+        input: userMessage,
+        previous_response_id: previousResponseId,
       });
+      setPreviousResponseId(response.id);
+      setTextArray((textArray) => [
+        ...textArray,
+        { role: "assistant", message: response.output_text ?? "" },
+      ]);
+    } catch (error) {
+      console.error(error);
+      setTextArray((textArray) => [
+        ...textArray,
+        {
+          role: "assistant",
+          message: "Something went wrong. Please try again.",
+        },
+      ]);
+    } finally {
+      document.getElementById("input").disabled = false;
+      document.getElementById("button").disabled = false;
+      document.getElementById("microphone").disabled = false;
+      setLoading(false);
     }
-
-    setTextArray(textArr);
   };
 
   useEffect(() => {
@@ -254,7 +239,7 @@ export const ChatInterface = () => {
                 ]);
                 setText("");
                 setLoading(true);
-                cycle(text, thread_id, assistant, openai);
+                cycle(text);
                 document.getElementById("input").disabled = true;
                 document.getElementById("button").disabled = true;
                 document.getElementById("microphone").disabled = true;
