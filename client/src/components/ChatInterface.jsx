@@ -5,19 +5,24 @@ import {
   getModel,
   getInstructions,
 } from "../utils.js";
+import { api } from "../api.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useChats } from "../context/ChatsContext.jsx";
 import "../App.css";
 
 export const ChatInterface = () => {
+  const { user } = useAuth();
+  const { currentChat, currentChatId, createChat, updateChat } = useChats();
   const [text, setText] = useState("");
   const [textArray, setTextArray] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [apiKeyValid, setApiKeyValid] = useState(true);
-  const [previousResponseId, setPreviousResponseId] = useState(null);
   const openai = createOpenAI();
   const model = getModel();
   const instructions = getInstructions();
   const bottomRef = useRef(null);
+  const canSend = apiKeyValid && !!user;
 
   const handleSpeechToText = () => {
     const SpeechRecognition =
@@ -69,18 +74,50 @@ export const ChatInterface = () => {
     }
   }, [isListening]);
 
+  useEffect(() => {
+    if (!currentChatId) {
+      setTextArray([]);
+      return;
+    }
+    api
+      .get(`/api/chats/${currentChatId}/messages`)
+      .then((msgs) =>
+        setTextArray(msgs.map((m) => ({ role: m.role, message: m.content }))),
+      )
+      .catch(() => setTextArray([]));
+  }, [currentChatId]);
+
   const cycle = async (userMessage) => {
     try {
+      const chat = currentChat ?? (await createChat(userMessage.slice(0, 50)));
+
+      await api.post(`/api/chats/${chat._id}/messages`, {
+        role: "user",
+        content: userMessage,
+      });
+
       const response = await openai.responses.create({
         model,
         instructions,
         input: userMessage,
-        previous_response_id: previousResponseId,
+        previous_response_id: chat.previousResponseId ?? null,
       });
-      setPreviousResponseId(response.id);
+      const reply = response.output_text ?? "";
+
+      await api.post(`/api/chats/${chat._id}/messages`, {
+        role: "assistant",
+        content: reply,
+      });
+
+      const patch = { previousResponseId: response.id };
+      if (chat.title === "New chat") {
+        patch.title = userMessage.slice(0, 50) || "New chat";
+      }
+      await updateChat(chat._id, patch);
+
       setTextArray((textArray) => [
         ...textArray,
-        { role: "assistant", message: response.output_text ?? "" },
+        { role: "assistant", message: reply },
       ]);
     } catch (error) {
       console.error(error);
@@ -126,34 +163,38 @@ export const ChatInterface = () => {
                 MICRO - BOT
               </h1>
             </div>
-            <div className="mr-[67.5px] flex items-start justify-start space-x-5">
-              <img
-                className="inline-block h-8 w-8 rounded-full ring ring-white md:h-12 md:w-12 lg:h-12 lg:w-12"
-                src="/src/assets/Babylon-Profile-Image.jpg"
-                alt="logo"
-              />
-              <p
-                className={
-                  "w-fit rounded-bl-3xl rounded-br-3xl rounded-tl-md rounded-tr-3xl bg-white p-4 text-black drop-shadow-lg"
-                }
-              >
-                Hi! 👋 How can I help you today?
-              </p>
-            </div>
-            <div className="mr-[67.5px] flex items-start justify-start space-x-5">
-              <img
-                className="inline-block h-8 w-8 rounded-full ring ring-white md:h-12 md:w-12 lg:h-12 lg:w-12"
-                src="/src/assets/Babylon-Profile-Image.jpg"
-                alt="logo"
-              />
-              <p
-                className={
-                  "w-fit rounded-bl-3xl rounded-br-3xl rounded-tl-md rounded-tr-3xl bg-white p-4 text-black drop-shadow-lg"
-                }
-              >
-                Ask me anything about Babylon Micro-Farms.
-              </p>
-            </div>
+            {user && (
+              <>
+                <div className="mr-[67.5px] flex items-start justify-start space-x-5">
+                  <img
+                    className="inline-block h-8 w-8 rounded-full ring ring-white md:h-12 md:w-12 lg:h-12 lg:w-12"
+                    src="/src/assets/Babylon-Profile-Image.jpg"
+                    alt="logo"
+                  />
+                  <p
+                    className={
+                      "w-fit rounded-bl-3xl rounded-br-3xl rounded-tl-md rounded-tr-3xl bg-white p-4 text-black drop-shadow-lg"
+                    }
+                  >
+                    Hi! 👋 How can I help you today?
+                  </p>
+                </div>
+                <div className="mr-[67.5px] flex items-start justify-start space-x-5">
+                  <img
+                    className="inline-block h-8 w-8 rounded-full ring ring-white md:h-12 md:w-12 lg:h-12 lg:w-12"
+                    src="/src/assets/Babylon-Profile-Image.jpg"
+                    alt="logo"
+                  />
+                  <p
+                    className={
+                      "w-fit rounded-bl-3xl rounded-br-3xl rounded-tl-md rounded-tr-3xl bg-white p-4 text-black drop-shadow-lg"
+                    }
+                  >
+                    Ask me anything about Babylon Micro-Farms.
+                  </p>
+                </div>
+              </>
+            )}
 
             {textArray.map((element, index) =>
               element.role === "assistant" ? (
@@ -214,6 +255,22 @@ export const ChatInterface = () => {
                 </p>
               </div>
             )}
+            {apiKeyValid && !user && (
+              <div className="mr-[67.5px] flex items-start justify-start space-x-5">
+                <img
+                  className="inline-block h-8 w-8 rounded-full ring ring-white md:h-12 md:w-12 lg:h-12 lg:w-12"
+                  src="/src/assets/Babylon-Profile-Image.jpg"
+                  alt="logo"
+                />
+                <p
+                  className={
+                    "w-fit rounded-bl-3xl rounded-br-3xl rounded-tl-md rounded-tr-3xl bg-white p-4 text-black drop-shadow-lg"
+                  }
+                >
+                  Log in or sign up to start chatting.
+                </p>
+              </div>
+            )}
             <div ref={bottomRef} />
             {loading && (
               <div className="message assistant-message">
@@ -247,30 +304,30 @@ export const ChatInterface = () => {
             >
               <div className="relative flex flex-row items-end justify-center">
                 <input
-                  className=" flex-auto rounded-3xl border-2 border-slate-300 bg-white p-3 text-black drop-shadow-lg placeholder:italic placeholder:text-slate-400 focus:border-babylon-blue-dark focus:outline-none focus:ring-1 focus:ring-babylon-blue-dark dark:focus:border-babylon-blue-light dark:focus:ring-babylon-blue-light"
+                  className=" flex-auto rounded-3xl border-2 border-slate-300 bg-white p-3 text-black drop-shadow-lg placeholder:italic placeholder:text-slate-400 focus:border-babylon-blue-dark focus:outline-none focus:ring-1 focus:ring-babylon-blue-dark disabled:cursor-not-allowed dark:focus:border-babylon-blue-light dark:focus:ring-babylon-blue-light"
                   type="text"
                   id="input"
                   placeholder="Message Micro-Bot..."
                   value={text}
                   onChange={(event) => setText(event.target.value)}
-                  disabled={!apiKeyValid}
+                  disabled={!canSend}
                   required
                 />
                 <input
-                  className=" absolute right-0 inline-block h-full rounded-r-3xl bg-babylon-blue-dark text-white dark:bg-babylon-blue-light"
+                  className=" absolute right-0 inline-block h-full rounded-r-3xl bg-babylon-blue-dark text-white disabled:cursor-not-allowed dark:bg-babylon-blue-light"
                   type="image"
                   id="button"
                   name="submit"
                   src="/src/assets/next.png"
                   alt="Submit"
-                  disabled={!apiKeyValid}
+                  disabled={!canSend}
                 />
                 <button
-                  className="absolute right-12 inline-block aspect-square h-full bg-babylon-blue-dark p-3 dark:bg-babylon-blue-light"
+                  className="absolute right-12 inline-block aspect-square h-full bg-babylon-blue-dark p-3 disabled:cursor-not-allowed dark:bg-babylon-blue-light"
                   type="button"
                   id="microphone"
                   onClick={() => setIsListening(!isListening)}
-                  disabled={!apiKeyValid}
+                  disabled={!canSend}
                 >
                   <img
                     className=""
